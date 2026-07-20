@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hmovie - Seu Portal Minimalista de Filmes, Séries e TV</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Desktop-First Header Navigation -->
+    <header class="navbar">
+      <div class="navbar-container">
+        <!-- Logo -->
+        <div class="brand" onclick="switchView('home')">
+          <span class="brand-badge">H</span>
+          <span class="brand-name">movie</span>
+        </div>
+
+        <!-- Desktop Navigation Links -->
+        <nav class="nav-links">
+          <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Início</button>
+          <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> Filmes</button>
+          <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> Séries</button>
+          <button class="nav-link" data-view="animes"><i class="fa-solid fa-wand-magic-sparkles"></i> Animes</button>
+          <button class="nav-link" data-view="doramas"><i class="fa-solid fa-heart"></i> Doramas</button>
+          <button class="nav-link" data-view="live-tv"><i class="fa-solid fa-satellite-dish"></i> TV Ao Vivo</button>
+          <button class="nav-link" data-view="sports"><i class="fa-solid fa-trophy"></i> Esportes</button>
+          <button class="nav-link" data-view="watchlist" id="nav-btn-watchlist" style="display:none;"><i class="fa-solid fa-bookmark"></i> Minha Lista</button>
+        </nav>
+
+        <!-- Right Side Controls (Search + User Profile + Settings) -->
+        <div class="header-actions">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="global-search" placeholder="Buscar filmes, canais ou jogos...">
+            <button class="clear-btn" id="clear-search-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+
+          <!-- Auth Account Area -->
+          <div class="user-auth-area">
+            <button class="btn btn-secondary btn-sm" id="btn-open-login"><i class="fa-solid fa-user"></i> Entrar</button>
+            <div class="user-profile-badge" id="user-profile-box" style="display:none;">
+              <span class="user-avatar" id="user-avatar">U</span>
+              <span class="user-name" id="user-name">Usuário</span>
+              <button class="btn-logout" id="btn-logout" title="Sair da Conta"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+          </div>
+
+          <button class="btn-settings-icon" data-view="settings" title="Configurações">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+
+          <button class="mobile-toggle" id="mobile-menu-btn">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Dropdown Navigation -->
+      <div class="mobile-menu" id="mobile-menu-drawer">
+        <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Início</button>
+        <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> Filmes</button>
+        <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> Séries</button>
+        <button class="nav-link" data-view="animes"><i class="fa-solid fa-wand-magic-sparkles"></i> Animes</button>
+        <button class="nav-link" data-view="doramas"><i class="fa-solid fa-heart"></i> Doramas</button>
+        <button class="nav-link" data-view="live-tv"><i class="fa-solid fa-satellite-dish"></i> TV Ao Vivo</button>
+        <button class="nav-link" data-view="sports"><i class="fa-solid fa-trophy"></i> Esportes</button>
+        <button class="nav-link" data-view="watchlist" id="mobile-btn-watchlist" style="display:none;"><i class="fa-solid fa-bookmark"></i> Minha Lista</button>
+        <button class="nav-link" data-view="settings"><i class="fa-solid fa-gear"></i> Configurações</button>
+      </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="content-wrapper">
+      
+      <!-- VIEW: HOME -->
+      <section class="view-section active" id="view-home">
+        <!-- Minimal Hero Showcase for PC/Laptop -->
+        <div class="hero-showcase" id="hero-showcase">
+          <div class="hero-bg" id="hero-bg"></div>
+          <div class="hero-overlay"></div>
+          <div class="hero-details">
+            <span class="hero-tag" id="hero-tag">Destaque Hoje</span>
+            <h1 class="hero-title" id="hero-title">Carregando Hmovie...</h1>
+            <p class="hero-desc" id="hero-desc">Explore um catálogo limpo e direto para assistir canais, jogos e episódios lançados.</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" id="hero-play-btn"><i class="fa-solid fa-play"></i> Assistir Agora</button>
+              <button class="btn btn-secondary" id="hero-info-btn"><i class="fa-solid fa-circle-info"></i> Detalhes</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Continuar Assistindo (User Watch History) -->
+        <div class="section-block" id="continue-watching-section" style="display:none;">
+          <div class="block-header">
+            <h2><i class="fa-solid fa-clock-rotate-left text-accent"></i> Continuar Assistindo (Seus Históricos)</h2>
+          </div>
+          <div class="row-scroll-wrapper">
+            <button class="scroll-btn left" id="btn-prev-continue"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="row-scroll cards-row" id="continue-watching-row">
+              <!-- History cards -->
+            </div>
+            <button class="scroll-btn right" id="btn-next-continue"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Section: Recém Lançados -->
+        <div class="section-block">
+          <div class="block-header">
+            <h2><i class="fa-solid fa-fire text-accent"></i> Recém Lançados</h2>
+          </div>
+          <div class="row-scroll-wrapper">
+            <button class="scroll-btn left" id="btn-prev-releases"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="row-scroll cards-row" id="releases-carousel">
+              <!-- Cards dynamically inserted -->
+            </div>
+            <button class="scroll-btn right" id="btn-next-releases"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Section: Canais Populares -->
+        <div class="section-block">
+          <div class="block-header">
+            <h2><i class="fa-solid fa-satellite-dish text-accent"></i> Canais de TV Populares</h2>
+            <button class="link-btn view-all-btn" data-target="live-tv">Ver Todos <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <div class="row-scroll-wrapper">
+            <button class="scroll-btn left" id="btn-prev-channels"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="row-scroll channels-row" id="channels-carousel">
+              <!-- Channels dynamically inserted -->
+            </div>
+            <button class="scroll-btn right" id="btn-next-channels"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Section: Esportes de Hoje -->
+        <div class="section-block">
+          <div class="block-header">
+            <h2><i class="fa-solid fa-trophy text-red"></i> Jogos & Transmissões de Hoje</h2>
+            <button class="link-btn view-all-btn" data-target="sports">Ver Agenda <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <div class="sports-grid-compact" id="sports-highlights">
+            <!-- Sports dynamically inserted -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: CATALOG (Filmes, Séries, Animes, Doramas) -->
+      <section class="view-section" id="view-catalog">
+        <div class="page-title-bar">
+          <h1 id="catalog-title">Filmes</h1>
+          <div class="genres-row" id="genres-container">
+            <!-- Genre pills -->
+          </div>
+        </div>
+
+        <div class="catalog-grid-wrapper">
+          <div class="media-grid" id="catalog-grid">
+            <!-- Cards dynamically inserted -->
+          </div>
+          <div class="loader-box" id="catalog-loader" style="display:none;">
+            <div class="spinner"></div>
+          </div>
+          <button class="btn btn-secondary load-more" id="load-more-btn" style="display:none;">Carregar Mais</button>
+        </div>
+      </section>
+
+      <!-- VIEW: MINHA LISTA (WATCHLIST) -->
+      <section class="view-section" id="view-watchlist">
+        <div class="page-title-bar">
+          <h1>Minha Lista</h1>
+          <p class="page-subtitle">Filmes, séries e animes salvos na sua conta</p>
+        </div>
+        <div class="catalog-grid-wrapper">
+          <div class="media-grid" id="watchlist-grid">
+            <!-- Saved items -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: TV AO VIVO -->
+      <section class="view-section" id="view-live-tv">
+        <div class="page-title-bar">
+          <h1>Canais de TV Ao Vivo</h1>
+          <p class="page-subtitle">Transmissões ao vivo dos principais canais</p>
+          <div class="genres-row" id="tv-categories-container">
+            <!-- Categories -->
+          </div>
+        </div>
+
+        <div class="channels-grid-full" id="tv-channels-grid">
+          <!-- Full list of channels -->
+        </div>
+      </section>
+
+      <!-- VIEW: ESPORTES -->
+      <section class="view-section" id="view-sports">
+        <div class="page-title-bar">
+          <h1>Agenda Esportiva</h1>
+          <p class="page-subtitle">Jogos de futebol, basquete, beisebol e transmissões em tempo real</p>
+        </div>
+
+        <div class="sports-filters">
+          <div class="genres-row" id="sports-categories-container">
+            <!-- Categories -->
+          </div>
+          <div class="status-tabs">
+            <button class="status-btn active" data-status="all">Todos</button>
+            <button class="status-btn" data-status="live"><span class="pulse-dot"></span> Ao Vivo</button>
+            <button class="status-btn" data-status="upcoming">Próximos</button>
+          </div>
+        </div>
+
+        <div class="sports-list-full" id="sports-agenda-list">
+          <!-- Full list of sports -->
+        </div>
+      </section>
+
+      <!-- VIEW: CONFIGURAÇÕES -->
+      <section class="view-section" id="view-settings">
+        <div class="page-title-bar">
+          <h1>Configurações Hmovie</h1>
+          <p class="page-subtitle">Personalize a aparência do seu reprodutor e preferências visuais</p>
+        </div>
+
+        <div class="settings-layout" style="grid-template-columns: 1fr;">
+          <!-- Custom Player Box -->
+          <div class="settings-card">
+            <h3><i class="fa-solid fa-sliders text-accent"></i> Preferências do Reprodutor</h3>
+            <p class="card-desc">Personalize o comportamento do player Hmovie.</p>
+
+            <div class="input-group">
+              <label>Cor do Player</label>
+              <div class="color-options">
+                <button class="color-btn active" data-color="7c3aed" style="background:#7c3aed"></button>
+                <button class="color-btn" data-color="ec4899" style="background:#ec4899"></button>
+                <button class="color-btn" data-color="06b6d4" style="background:#06b6d4"></button>
+                <button class="color-btn" data-color="10b981" style="background:#10b981"></button>
+                <button class="color-btn" data-color="f59e0b" style="background:#f59e0b"></button>
+                <input type="text" id="player-custom-color" placeholder="Hex (ex: 7c3aed)" maxlength="6">
+              </div>
+            </div>
+
+            <div class="check-group">
+              <label class="check-item">
+                <input type="checkbox" id="pref-no-ep-list" checked>
+                <span>Ocultar lista de episódios dentro do player</span>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="pref-no-link" checked>
+                <span>Remover botão de link externo</span>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="pref-transparent" checked>
+                <span>Fundo transparente</span>
+              </label>
+            </div>
+
+            <div class="btn-row" style="margin-top: 1.5rem;">
+              <button class="btn btn-primary" id="btn-save-settings">Salvar Preferências</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: AUTHENTICATION (LOGIN / REGISTRAR) -->
+  <div class="modal" id="auth-modal">
+    <div class="modal-bg" onclick="closeModal('auth-modal')"></div>
+    <div class="modal-card auth-card">
+      <button class="close-btn" onclick="closeModal('auth-modal')"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="auth-header">
+        <span class="brand-badge">H</span>
+        <h2 id="auth-title">Entrar no Hmovie</h2>
+        <p class="auth-subtitle">Guarde o histórico do que você assiste e crie sua lista</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Entrar</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Criar Conta</button>
+      </div>
+
+      <form class="auth-form" id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="input-group">
+          <label for="auth-username">Nome de Usuário</label>
+          <input type="text" id="auth-username" placeholder="Digite seu usuário..." required minlength="3">
+        </div>
+        <div class="input-group">
+          <label for="auth-password">Senha</label>
+          <input type="password" id="auth-password" placeholder="Digite sua senha..." required minlength="4">
+        </div>
+
+        <div id="auth-error-msg" class="test-msg text-red" style="display:none;"></div>
+
+        <button type="submit" class="btn btn-primary btn-large w-100" id="btn-auth-submit">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DETALHES DO CONTEÚDO -->
+  <div class="modal" id="details-modal">
+    <div class="modal-bg" onclick="closeModal('details-modal')"></div>
+    <div class="modal-card">
+      <button class="close-btn" onclick="closeModal('details-modal')"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="modal-hero">
+        <div class="modal-hero-img" id="details-backdrop"></div>
+        <div class="modal-hero-fade"></div>
+        <div class="modal-hero-info">
+          <h2 id="details-title">Carregando...</h2>
+          <div class="meta-row">
+            <span class="star-rating" id="details-rating"><i class="fa-solid fa-star"></i> --</span>
+            <span id="details-year">----</span>
+            <span id="details-duration">-- min</span>
+            <span id="details-type" class="badge">Filme</span>
+          </div>
+          <div class="genres-list" id="details-genres"></div>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <p class="synopsis" id="details-overview">Carregando sinopse...</p>
+
+        <!-- Series Selector -->
+        <div class="episodes-section" id="details-series-nav" style="display:none;">
+          <div class="episodes-header">
+            <h3>Temporadas e Episódios</h3>
+            <select id="season-selector" class="select-box"></select>
+          </div>
+          <div class="episodes-list" id="episodes-container"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="details-watchlist-btn" style="margin-right:0.5rem;">
+            <i class="fa-solid fa-bookmark"></i> Minha Lista
+          </button>
+          <button class="btn btn-primary btn-large" id="details-play-btn"><i class="fa-solid fa-play"></i> Assistir Agora</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REPRODUTOR HMOVIE (THEATER MODE) -->
+  <div class="player-window" id="player-modal">
+    <div class="player-topbar">
+      <div class="playing-title-box">
+        <span class="playing-brand">Hmovie Player</span>
+        <h3 id="player-title">Título</h3>
+        <span id="player-subtitle"></span>
+      </div>
+      <button class="btn btn-close-player" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i> Fechar</button>
+    </div>
+
+    <div class="player-body">
+      <div class="iframe-container" id="player-iframe-wrapper">
+        <div class="player-loading" id="player-iframe-loader">
+          <div class="spinner"></div>
+          <p>Carregando stream...</p>
+        </div>
+      </div>
+
+      <!-- Episode/Stream Sidebar -->
+      <div class="player-sidebar" id="player-sidebar">
+        <div class="sidebar-head" id="player-sidebar-head">
+          <h4>Episódios</h4>
+        </div>
+        <div class="sidebar-list" id="player-sidebar-episodes"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

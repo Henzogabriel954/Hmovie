@@ -1,0 +1,16 @@
+{
+  "name": "superflix-node-player",
+  "version": "1.0.0",
+  "description": "Minimalist Node.js Local Player",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.23.1",
+    "redis": "^6.1.0"
+  }
+}
