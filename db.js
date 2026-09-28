@@ -148,9 +148,24 @@ async function initRedis() {
   }
 }
 
-// Session management
-const memorySessions = {};
-const memoryCache = {};
+// Session management (com TTL para evitar memory leak sem Redis)
+const memorySessions = {};   // { token: { data, expiresAt } }
+const memoryCache = {};      // { key: { data, expiresAt } }
+
+// Limpeza periódica de entradas expiradas (a cada 5 minutos)
+setInterval(() => {
+  const now = Date.now();
+  for (const key of Object.keys(memorySessions)) {
+    if (memorySessions[key].expiresAt && now > memorySessions[key].expiresAt) {
+      delete memorySessions[key];
+    }
+  }
+  for (const key of Object.keys(memoryCache)) {
+    if (memoryCache[key].expiresAt && now > memoryCache[key].expiresAt) {
+      delete memoryCache[key];
+    }
+  }
+}, 5 * 60 * 1000).unref();
 
 async function setSession(token, userData, ttlSeconds = 604800) {
   if (isRedisConnected && redisClient) {
@@ -159,7 +174,7 @@ async function setSession(token, userData, ttlSeconds = 604800) {
       return;
     } catch (e) {}
   }
-  memorySessions[token] = userData;
+  memorySessions[token] = { data: userData, expiresAt: Date.now() + (ttlSeconds * 1000) };
 }
 
 async function getSession(token) {
@@ -169,7 +184,10 @@ async function getSession(token) {
       return data ? JSON.parse(data) : null;
     } catch (e) {}
   }
-  return memorySessions[token] || null;
+  const entry = memorySessions[token];
+  if (entry && entry.expiresAt > Date.now()) return entry.data;
+  if (entry) delete memorySessions[token];
+  return null;
 }
 
 async function removeSession(token) {
@@ -190,7 +208,7 @@ async function setCache(key, value, ttlSeconds = 300) {
       return;
     } catch (e) {}
   }
-  memoryCache[key] = value;
+  memoryCache[key] = { data: value, expiresAt: Date.now() + (ttlSeconds * 1000) };
 }
 
 async function getCache(key) {
@@ -200,7 +218,10 @@ async function getCache(key) {
       return data ? JSON.parse(data) : null;
     } catch (e) {}
   }
-  return memoryCache[key] || null;
+  const entry = memoryCache[key];
+  if (entry && entry.expiresAt > Date.now()) return entry.data;
+  if (entry) delete memoryCache[key];
+  return null;
 }
 
 async function clearCache(key) {
@@ -211,6 +232,131 @@ async function clearCache(key) {
     } catch (e) {}
   }
   delete memoryCache[key];
+}
+
+// --------------------------------------------------
+// Repository Layer
+// --------------------------------------------------
+
+async function findUserByUsername(username) {
+  const cleanUsername = (username || '').trim().toLowerCase();
+  if (isMysqlConnected) {
+    const [rows] = await mysqlPool.query('SELECT * FROM users WHERE username = ?', [cleanUsername]);
+    if (rows.length > 0) return rows[0];
+    return null;
+  } else {
+    const fallback = getFallbackData();
+    return fallback.users.find(u => u.username === cleanUsername) || null;
+  }
+}
+
+async function createUser(username, passwordHash) {
+  const cleanUsername = (username || '').trim().toLowerCase();
+  if (isMysqlConnected) {
+    const [result] = await mysqlPool.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [cleanUsername, passwordHash]);
+    return { id: result.insertId, username: cleanUsername };
+  } else {
+    const fallback = getFallbackData();
+    if (fallback.users.some(u => u.username === cleanUsername)) {
+      throw { code: 'ER_DUP_ENTRY' }; // Mock duplicate entry error
+    }
+    const userId = Date.now();
+    const userData = { id: userId, username: cleanUsername, password_hash: passwordHash };
+    fallback.users.push(userData);
+    saveFallbackData(fallback);
+    return { id: userId, username: cleanUsername };
+  }
+}
+
+async function getUserHistory(userId, limit = 50) {
+  if (isMysqlConnected) {
+    const [rows] = await mysqlPool.query(
+      'SELECT id, media_type, media_id, title, poster, season, episode, progress, watched_at FROM history WHERE user_id = ? ORDER BY watched_at DESC LIMIT ?',
+      [userId, limit]
+    );
+    return rows;
+  } else {
+    const fallback = getFallbackData();
+    const userHistory = (fallback.history || [])
+      .filter(h => h.user_id === userId)
+      .sort((a,b) => new Date(b.watched_at) - new Date(a.watched_at));
+    return userHistory.slice(0, limit);
+  }
+}
+
+async function upsertHistory(userId, data) {
+  const { media_type, media_id, title, poster, season = 1, episode = 1, progress = 0 } = data;
+  if (isMysqlConnected) {
+    await mysqlPool.query(`
+      INSERT INTO history (user_id, media_type, media_id, title, poster, season, episode, progress)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        title = VALUES(title),
+        poster = VALUES(poster),
+        season = VALUES(season),
+        episode = VALUES(episode),
+        progress = VALUES(progress),
+        watched_at = CURRENT_TIMESTAMP
+    `, [userId, media_type, String(media_id), title, poster || '', season, episode, progress]);
+  } else {
+    const fallback = getFallbackData();
+    fallback.history = fallback.history || [];
+    const idx = fallback.history.findIndex(h => 
+      h.user_id === userId && h.media_type === media_type && String(h.media_id) === String(media_id) && h.season == season && h.episode == episode
+    );
+    const record = {
+      id: Date.now(),
+      user_id: userId,
+      media_type,
+      media_id: String(media_id),
+      title,
+      poster: poster || '',
+      season,
+      episode,
+      progress,
+      watched_at: new Date().toISOString()
+    };
+    if (idx >= 0) fallback.history[idx] = record;
+    else fallback.history.push(record);
+    saveFallbackData(fallback);
+  }
+}
+
+async function getUserWatchlist(userId) {
+  if (isMysqlConnected) {
+    const [rows] = await mysqlPool.query('SELECT id, media_type, media_id, title, poster, created_at FROM watchlist WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    return rows;
+  } else {
+    const fallback = getFallbackData();
+    return (fallback.watchlist || []).filter(w => w.user_id === userId);
+  }
+}
+
+async function toggleWatchlistItem(userId, data) {
+  const { media_type, media_id, title, poster } = data;
+  if (isMysqlConnected) {
+    const [existing] = await mysqlPool.query('SELECT id FROM watchlist WHERE user_id = ? AND media_type = ? AND media_id = ?', [userId, media_type, String(media_id)]);
+    if (existing.length > 0) {
+      await mysqlPool.query('DELETE FROM watchlist WHERE id = ?', [existing[0].id]);
+      return { added: false };
+    } else {
+      await mysqlPool.query('INSERT INTO watchlist (user_id, media_type, media_id, title, poster) VALUES (?, ?, ?, ?, ?)', [userId, media_type, String(media_id), title, poster || '']);
+      return { added: true };
+    }
+  } else {
+    const fallback = getFallbackData();
+    fallback.watchlist = fallback.watchlist || [];
+    const idx = fallback.watchlist.findIndex(w => w.user_id === userId && w.media_type === media_type && String(w.media_id) === String(media_id));
+    if (idx >= 0) {
+      fallback.watchlist.splice(idx, 1);
+      saveFallbackData(fallback);
+      return { added: false };
+    } else {
+      fallback.watchlist.push({ id: Date.now(), user_id: userId, media_type, media_id: String(media_id), title, poster: poster || '', created_at: new Date().toISOString() });
+      saveFallbackData(fallback);
+      return { added: true };
+    }
+  }
 }
 
 module.exports = {
@@ -226,5 +372,25 @@ module.exports = {
   removeSession,
   setCache,
   getCache,
-  clearCache
+  clearCache,
+  findUserByUsername,
+  createUser,
+  getUserHistory,
+  upsertHistory,
+  getUserWatchlist,
+  toggleWatchlistItem,
+  async shutdown() {
+    try {
+      if (redisClient && isRedisConnected) {
+        await redisClient.quit();
+        console.log('[Redis] Conexão encerrada.');
+      }
+    } catch (e) {}
+    try {
+      if (mysqlPool) {
+        await mysqlPool.end();
+        console.log('[MySQL] Pool de conexões encerrado.');
+      }
+    } catch (e) {}
+  }
 };

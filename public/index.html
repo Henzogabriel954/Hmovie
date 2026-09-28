@@ -66,6 +66,21 @@
 
       <!-- Mobile Dropdown Navigation -->
       <div class="mobile-menu" id="mobile-menu-drawer">
+        <div class="mobile-auth-section" id="mobile-auth-section">
+          <button class="btn btn-primary w-100 mobile-auth-btn" id="mobile-btn-login" onclick="openModal('auth-modal'); UI.closeMobileDrawer();">
+            <i class="fa-solid fa-user"></i> Entrar / Criar Conta
+          </button>
+          <div class="mobile-user-profile" id="mobile-user-profile" style="display:none;">
+            <div class="mobile-user-info">
+              <span class="user-avatar" id="mobile-user-avatar">U</span>
+              <span class="user-name" id="mobile-user-name">Usuário</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="mobile-btn-logout" title="Sair da Conta">
+              <i class="fa-solid fa-right-from-bracket"></i> Sair
+            </button>
+          </div>
+        </div>
+        <div class="mobile-menu-divider"></div>
         <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Início</button>
         <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> Filmes</button>
         <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> Séries</button>
@@ -359,7 +374,12 @@
         <h3 id="player-title">Título</h3>
         <span id="player-subtitle"></span>
       </div>
-      <button class="btn btn-close-player" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i> Fechar</button>
+      <div class="player-topbar-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+        <button class="btn btn-secondary btn-sm" id="player-details-btn" onclick="Player.openSeriesDetails()" style="display:none; padding: 0.4rem 0.75rem; font-size: 0.85rem;">
+          <i class="fa-solid fa-circle-info"></i> <span class="btn-text">Detalhes</span>
+        </button>
+        <button class="btn btn-close-player" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i> Fechar</button>
+      </div>
     </div>
 
     <div class="player-body">
@@ -370,13 +390,13 @@
         </div>
       </div>
 
-      <!-- Episode/Stream Sidebar -->
-      <div class="player-sidebar" id="player-sidebar">
+      <!-- Episode/Stream Sidebar (Fixo - do lado no PC/Landscape, embaixo no celular portrait) -->
+      <aside class="player-sidebar" id="player-sidebar">
         <div class="sidebar-head" id="player-sidebar-head">
           <h4>Episódios</h4>
         </div>
         <div class="sidebar-list" id="player-sidebar-episodes"></div>
-      </div>
+      </aside>
     </div>
   </div>
 

@@ -54,13 +54,72 @@ const Hmovie = (function () {
 
   const TMDB_IMAGE_URL = 'https://image.tmdb.org/t/p';
 
+  const CardFactory = {
+    FALLBACK_POSTER: 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=342&auto=format&fit=crop',
+    createMediaCard({ poster, title, subtitle, badgeText, badgeClass, ratingText, overlayIcon = 'fa-play', extraDetailsHtml = '', onClick }) {
+      const card = document.createElement('div');
+      card.className = 'movie-card';
+      const safePoster = poster || this.FALLBACK_POSTER;
+      const badgeHtml = badgeText ? `<span class="card-badge ${badgeClass || ''}">${badgeText}</span>` : '';
+      const ratingHtml = ratingText ? `<div class="card-rating"><i class="fa-solid fa-star"></i> ${ratingText}</div>` : '';
+      const subtitleHtml = subtitle ? `<div class="card-subtitle">${subtitle}</div>` : '';
+      card.innerHTML = `
+        <div class="card-poster-wrapper">
+          <img class="card-poster" src="${safePoster}" alt="${title}" loading="lazy" decoding="async">
+          <div class="card-overlay"><div class="card-play-icon"><i class="fa-solid ${overlayIcon}"></i></div></div>
+          ${ratingHtml}
+          ${badgeHtml}
+        </div>
+        <div class="card-details">
+          <div class="card-title">${title}</div>
+          ${subtitleHtml}
+          ${extraDetailsHtml}
+        </div>
+      `;
+      if (onClick) card.onclick = onClick;
+      return card;
+    },
+    createChannelCard({ logoUrl, name, category, onClick }) {
+      const card = document.createElement('div');
+      card.className = 'channel-card';
+      card.innerHTML = `
+        <div class="channel-logo-wrapper">
+          <img class="channel-logo" src="${logoUrl}" alt="${name}" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML='<i class=\\'fa-solid fa-satellite-dish\\' style=\\'font-size:1.5rem;color:#7c3aed\\'></i>'">
+        </div>
+        <div class="channel-name">${name}</div>
+        <div class="channel-genre">${category || 'TV'}</div>
+      `;
+      if (onClick) card.onclick = onClick;
+      return card;
+    },
+    getPosterUrl(posterPath, size = 'w342') {
+      return posterPath ? `${TMDB_IMAGE_URL}/${size}${posterPath}` : this.FALLBACK_POSTER;
+    }
+  };
+
+  const AuthFetch = {
+    async get(url) {
+      return fetch(url, { headers: { 'Authorization': `Bearer ${state.userToken}` } });
+    },
+    async post(url, body) {
+      const options = {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.userToken}` }
+      };
+      if (body) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+      return fetch(url, options);
+    }
+  };
+
   // =========================================================================
   // 2. SISTEMA DE CACHE LOCAL PERSISTENTE (24H LOCALSTORAGE + MEMÓRIA RAM)
   // =========================================================================
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Horas em milissegundos
 
   const cache = {
-    meta: new Map(),
     details: new Map(),
     seasons: new Map(),
 
@@ -151,25 +210,7 @@ const Hmovie = (function () {
     },
 
     /**
-     * Busca metadados resumidos de um item TMDB com cache de 24 horas.
-     * @param {string} type - 'movie' ou 'tv'
-     * @param {string|number} id - ID no TMDB
-     * @returns {Promise<object|null>}
-     */
-    async fetchTMDBMeta(type, id) {
-      const key = `${type}_${id}`;
-      const cached = cache.get('meta', key);
-      if (cached) return cached;
-
-      try {
-        const data = await this.fetchJSON(`/api/tmdb/${type}/${id}`);
-        if (data) cache.set('meta', key, data);
-        return data;
-      } catch (e) { return null; }
-    },
-
-    /**
-     * Busca detalhes completos de um filme/série no TMDB com cache de 24 horas.
+     * Busca metadados/detalhes de um item TMDB com cache unificado de 24 horas.
      * @param {string} type - 'movie' ou 'tv'
      * @param {string|number} id - ID no TMDB
      * @returns {Promise<object|null>}
@@ -248,10 +289,24 @@ const Hmovie = (function () {
 
     // Botões de ação da Hero Showcase
     document.getElementById('hero-play-btn')?.addEventListener('click', () => {
-      if (state.heroItem) Player.playItem(state.heroItem);
+      if (state.heroItem) {
+        const hi = state.heroItem;
+        Player.playItem({
+          type: 'serie',
+          id: hi.tmdb_id || hi.id,
+          season: hi.season || 1,
+          episode: hi.number || hi.episode || 1,
+          title: hi.title,
+          poster: hi.poster,
+          subtitle: hi.episode ? `T${hi.season || 1}: E${hi.number || 1} - ${hi.episode}` : ''
+        });
+      }
     });
     document.getElementById('hero-info-btn')?.addEventListener('click', () => {
-      if (state.heroItem) Catalog.openDetails(state.heroItem);
+      if (state.heroItem) {
+        const hi = state.heroItem;
+        Catalog.openDetails({ type: 'tv', id: hi.tmdb_id || hi.id });
+      }
     });
 
     // Rolagem horizontal por botões nos carrosséis
@@ -286,7 +341,17 @@ const Hmovie = (function () {
 
     // Modal de Autenticação
     document.getElementById('btn-open-login')?.addEventListener('click', () => UI.openModal('auth-modal'));
-    document.getElementById('btn-logout')?.addEventListener('click', Auth.handleLogout);
+    document.getElementById('btn-logout')?.addEventListener('click', () => Auth.handleLogout());
+    document.getElementById('mobile-btn-logout')?.addEventListener('click', () => {
+      Auth.handleLogout();
+      UI.closeMobileDrawer();
+    });
+
+    // Reprodutor: Botões de Ação
+    document.getElementById('player-details-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      Player.openSeriesDetails();
+    });
 
     // Salvar Preferências de Configuração
     document.getElementById('btn-save-settings')?.addEventListener('click', UI.saveSettings);
@@ -448,7 +513,11 @@ const Hmovie = (function () {
   // 8. MÓDULO DA TELA INICIAL (HOME MODULE)
   // =========================================================================
   const Home = {
+    _loading: false,
     async load() {
+      if (this._loading) return;
+      this._loading = true;
+
       try {
         const calendarData = await API.fetchJSON('/api/calendario');
         state.recentEpisodes = Array.isArray(calendarData) ? calendarData : [];
@@ -475,6 +544,8 @@ const Hmovie = (function () {
           this.renderSportsHighlights(state.sportsEvents.slice(0, 5));
         }
       } catch (err) { console.error('Erro ao carregar jogos de hoje:', err); }
+
+      this._loading = false;
     },
 
     setupHero(item) {
@@ -508,15 +579,11 @@ const Hmovie = (function () {
       const grouped = this.groupEpisodes(episodes);
 
       grouped.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-
         let typeTag = 'série';
         let typeClass = 'type-serie';
         if (item.type === 3) { typeTag = 'anime'; typeClass = 'type-anime'; }
         else if (item.type === 5) { typeTag = 'dorama'; typeClass = 'type-dorama'; }
 
-        const poster = item.poster ? `${TMDB_IMAGE_URL}/w342${item.poster}` : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=342&auto=format&fit=crop';
         const epBadgeText = (item.minNumber === item.maxNumber)
           ? `${item.season}T ${item.minNumber} Ep`
           : `${item.season}T ${item.minNumber}-${item.maxNumber} Ep`;
@@ -525,34 +592,29 @@ const Hmovie = (function () {
           ? (item.episode || `Episódio ${item.minNumber}`)
           : `Episódios ${item.minNumber} ao ${item.maxNumber}`;
 
-        card.innerHTML = `
-          <div class="card-poster-wrapper">
-            <img class="card-poster" src="${poster}" alt="${item.title}" loading="lazy" decoding="async">
-            <div class="card-overlay"><div class="card-play-icon"><i class="fa-solid fa-play"></i></div></div>
-            <span class="card-badge ${typeClass}">${typeTag}</span>
-          </div>
-          <div class="card-details">
-            <div class="card-title">${item.title}</div>
-            <div class="card-subtitle">${epSubTitle}</div>
-            <span class="card-ep-label">${epBadgeText}</span>
-          </div>
-        `;
-
-        card.onclick = () => {
-          if (item.minNumber === item.maxNumber) {
-            Player.playItem({
-              type: 'serie',
-              id: item.tmdb_id,
-              season: item.season,
-              episode: item.maxNumber,
-              title: item.title,
-              poster: item.poster,
-              subtitle: `T${item.season}: E${item.maxNumber} - ${item.episode || ''}`
-            });
-          } else {
-            Catalog.openDetails({ type: 'tv', id: item.tmdb_id });
+        const card = CardFactory.createMediaCard({
+          poster: CardFactory.getPosterUrl(item.poster),
+          title: item.title,
+          subtitle: epSubTitle,
+          badgeText: typeTag,
+          badgeClass: typeClass,
+          extraDetailsHtml: `<span class="card-ep-label">${epBadgeText}</span>`,
+          onClick: () => {
+            if (item.minNumber === item.maxNumber) {
+              Player.playItem({
+                type: 'serie',
+                id: item.tmdb_id,
+                season: item.season,
+                episode: item.maxNumber,
+                title: item.title,
+                poster: item.poster,
+                subtitle: `T${item.season}: E${item.maxNumber} - ${item.episode || ''}`
+              });
+            } else {
+              Catalog.openDetails({ type: 'tv', id: item.tmdb_id });
+            }
           }
-        };
+        });
 
         container.appendChild(card);
       });
@@ -583,16 +645,12 @@ const Hmovie = (function () {
       container.innerHTML = '';
 
       channels.forEach(ch => {
-        const card = document.createElement('div');
-        card.className = 'channel-card';
-        card.innerHTML = `
-          <div class="channel-logo-wrapper">
-            <img class="channel-logo" src="${ch.logo_url}" alt="${ch.name}" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML='<i class=\\'fa-solid fa-satellite-dish\\' style=\\'font-size:1.5rem;color:#7c3aed\\'></i>'">
-          </div>
-          <div class="channel-name">${ch.name}</div>
-          <div class="channel-genre">${ch.category || 'TV'}</div>
-        `;
-        card.onclick = () => Player.playChannel(ch);
+        const card = CardFactory.createChannelCard({
+          logoUrl: ch.logo_url,
+          name: ch.name,
+          category: ch.category,
+          onClick: () => Player.playChannel(ch)
+        });
         container.appendChild(card);
       });
     },
@@ -723,7 +781,7 @@ const Hmovie = (function () {
       // Renderização Progressiva Responsiva
       const fetchPromises = ids.map(async (id) => {
         try {
-          const meta = await API.fetchTMDBMeta(state.catalog.type, id);
+          const meta = await API.fetchTMDBDetails(state.catalog.type, id);
           if (meta && (meta.title || meta.name) && grid) {
             grid.appendChild(this.createCard(meta));
           }
@@ -744,29 +802,18 @@ const Hmovie = (function () {
     },
 
     createCard(meta) {
-      const card = document.createElement('div');
-      card.className = 'movie-card';
-
-      const poster = meta.poster_path ? `${TMDB_IMAGE_URL}/w342${meta.poster_path}` : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=342&auto=format&fit=crop';
-      const rating = meta.vote_average ? meta.vote_average.toFixed(1) : '--';
       const year = meta.release_date ? meta.release_date.split('-')[0] : (meta.first_air_date ? meta.first_air_date.split('-')[0] : '----');
       const type = meta.media_type || (meta.first_air_date || meta.name ? 'tv' : state.catalog.type || 'movie');
       const label = type === 'tv' ? 'Série' : 'Filme';
 
-      card.innerHTML = `
-        <div class="card-poster-wrapper">
-          <img class="card-poster" src="${poster}" alt="${meta.title || meta.name}" loading="lazy" decoding="async">
-          <div class="card-overlay"><div class="card-play-icon"><i class="fa-solid fa-circle-info"></i></div></div>
-          <div class="card-rating"><i class="fa-solid fa-star"></i> ${rating}</div>
-        </div>
-        <div class="card-details">
-          <div class="card-title">${meta.title || meta.name}</div>
-          <div class="card-subtitle">${year} • ${label}</div>
-        </div>
-      `;
-
-      card.onclick = () => this.openDetails({ type: type, id: meta.id, meta });
-      return card;
+      return CardFactory.createMediaCard({
+        poster: CardFactory.getPosterUrl(meta.poster_path),
+        title: meta.title || meta.name,
+        subtitle: `${year} • ${label}`,
+        ratingText: meta.vote_average ? meta.vote_average.toFixed(1) : '--',
+        overlayIcon: 'fa-circle-info',
+        onClick: () => this.openDetails({ type: type, id: meta.id, meta })
+      });
     },
 
     async handleSearch(query) {
@@ -931,18 +978,43 @@ const Hmovie = (function () {
 
         res.episodes.forEach(ep => {
           const btn = document.createElement('button');
-          btn.className = 'ep-btn';
-          btn.innerHTML = `<span class="ep-btn-num">Episódio ${ep.episode_number}</span><span class="ep-btn-name">${ep.name}</span>`;
+          const status = Auth.getEpisodeStatus(tvId, seasonNum, ep.episode_number);
+
+          let statusBadge = '';
+          if (status === 'last-watched') {
+            btn.className = 'ep-btn last-watched';
+            statusBadge = '<span class="ep-status-badge last-watched"><i class="fa-solid fa-clock-rotate-left"></i> Último visto</span>';
+          } else if (status === 'watched') {
+            btn.className = 'ep-btn watched';
+            statusBadge = '<span class="ep-status-badge watched"><i class="fa-solid fa-check"></i> Visto</span>';
+          } else {
+            btn.className = 'ep-btn';
+          }
+
+          btn.innerHTML = `
+            <div class="ep-btn-top">
+              <span class="ep-btn-num">Episódio ${ep.episode_number}</span>
+              ${statusBadge}
+            </div>
+            <span class="ep-btn-name">${ep.name}</span>
+          `;
           btn.onclick = () => {
             UI.closeModal('details-modal');
+            const showTitle = (state.activeShow?.details && (state.activeShow.details.name || state.activeShow.details.title)) || state.activeShow?.title || 'Série';
             Player.playItem({
               type: 'serie', id: tvId, season: seasonNum, episode: ep.episode_number,
-              title: state.activeShow.details.name, poster: poster,
+              title: showTitle, poster: poster,
               subtitle: `T${seasonNum}: E${ep.episode_number} - ${ep.name}`
             });
           };
           container.appendChild(btn);
         });
+
+        // Auto-scroll to show episodes section on mobile
+        const section = document.getElementById('details-series-nav');
+        if (section) {
+          setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
+        }
       } catch (e) { container.innerHTML = '<p>Erro ao carregar episódios.</p>'; }
     }
   };
@@ -1004,16 +1076,12 @@ const Hmovie = (function () {
       }
 
       filtered.forEach(ch => {
-        const card = document.createElement('div');
-        card.className = 'channel-card';
-        card.innerHTML = `
-          <div class="channel-logo-wrapper">
-            <img class="channel-logo" src="${ch.logo_url}" alt="${ch.name}" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML='<i class=\\'fa-solid fa-satellite-dish\\' style=\\'font-size:1.5rem;color:#7c3aed\\'></i>'">
-          </div>
-          <div class="channel-name">${ch.name}</div>
-          <div class="channel-genre">${ch.category || 'TV'}</div>
-        `;
-        card.onclick = () => Player.playChannel(ch);
+        const card = CardFactory.createChannelCard({
+          logoUrl: ch.logo_url,
+          name: ch.name,
+          category: ch.category,
+          onClick: () => Player.playChannel(ch)
+        });
         container.appendChild(card);
       });
     }
@@ -1145,6 +1213,31 @@ const Hmovie = (function () {
   // 12. MÓDULO DO REPRODUTOR DE VÍDEO (PLAYER MODULE)
   // =========================================================================
   const Player = {
+    buildEmbedUrl(baseUrl) {
+      let hash = '';
+      if (state.playerColor) hash += `#color:${state.playerColor}`;
+      if (state.prefNoEpList) hash += '#noEpList';
+      if (state.prefNoLink) hash += '#noLink';
+      if (state.prefTransparent) hash += '#transparent';
+      return baseUrl + hash;
+    },
+
+    createIframe(src) {
+      const loader = document.getElementById('player-iframe-loader');
+      const wrapper = document.getElementById('player-iframe-wrapper');
+      if (loader) loader.style.display = 'flex';
+      const old = wrapper?.querySelector('iframe');
+      if (old) old.remove();
+
+      const iframe = document.createElement('iframe');
+      iframe.src = src;
+      iframe.allow = 'autoplay *; encrypted-media *; picture-in-picture *; fullscreen *';
+      iframe.allowFullscreen = true;
+      iframe.onload = () => { if (loader) loader.style.display = 'none'; };
+      if (wrapper) wrapper.appendChild(iframe);
+      return iframe;
+    },
+
     playItem(args) {
       state.activePlayer = args;
       UI.openModal('player-modal');
@@ -1154,36 +1247,27 @@ const Hmovie = (function () {
       if (titleEl) titleEl.textContent = args.title || 'Hmovie';
       if (subEl) subEl.textContent = args.subtitle || '';
 
-      Auth.recordWatchHistory(args);
+      const detailsBtn = document.getElementById('player-details-btn');
+      if (detailsBtn) {
+        detailsBtn.style.display = (args.type === 'serie' && args.id) ? 'inline-flex' : 'none';
+      }
 
-      const loader = document.getElementById('player-iframe-loader');
-      const wrapper = document.getElementById('player-iframe-wrapper');
+      Auth.recordWatchHistory(args);
       const sidebar = document.getElementById('player-sidebar');
 
-      if (loader) loader.style.display = 'flex';
-      const oldIframe = wrapper?.querySelector('iframe');
-      if (oldIframe) oldIframe.remove();
+      if (args.type === 'filme') {
+        if (sidebar) sidebar.classList.remove('show');
+      } else {
+        if (sidebar) sidebar.classList.add('show');
+        this.loadSidebar(args);
+      }
 
       let embedUrl = args.type === 'filme' 
         ? `https://superflixapi.pro/filme/${args.id}` 
         : `https://superflixapi.pro/serie/${args.id}/${args.season}/${args.episode}`;
 
-      if (args.type === 'filme' && sidebar) sidebar.classList.remove('show');
-      else this.loadSidebar(args);
-
-      let hash = '';
-      if (state.playerColor) hash += `#color:${state.playerColor}`;
-      if (state.prefNoEpList) hash += '#noEpList';
-      if (state.prefNoLink) hash += '#noLink';
-      if (state.prefTransparent) hash += '#transparent';
-      embedUrl += hash;
-
-      const iframe = document.createElement('iframe');
-      iframe.src = embedUrl;
-      iframe.allow = "autoplay *; encrypted-media *; picture-in-picture *; fullscreen *";
-      iframe.allowFullscreen = true;
-      iframe.onload = () => { if (loader) loader.style.display = 'none'; };
-      if (wrapper) wrapper.appendChild(iframe);
+      embedUrl = this.buildEmbedUrl(embedUrl);
+      this.createIframe(embedUrl);
     },
 
     playChannel(ch) {
@@ -1193,22 +1277,12 @@ const Hmovie = (function () {
       if (titleEl) titleEl.textContent = ch.name;
       if (subEl) subEl.textContent = 'TV AO VIVO';
 
+      const detailsBtn = document.getElementById('player-details-btn');
+      if (detailsBtn) detailsBtn.style.display = 'none';
+
       Auth.recordWatchHistory({ type: 'canal', id: ch.id, title: ch.name, poster: ch.logo_url });
-
-      const loader = document.getElementById('player-iframe-loader');
-      const wrapper = document.getElementById('player-iframe-wrapper');
       document.getElementById('player-sidebar')?.classList.remove('show');
-
-      if (loader) loader.style.display = 'flex';
-      const old = wrapper?.querySelector('iframe');
-      if (old) old.remove();
-
-      const iframe = document.createElement('iframe');
-      iframe.src = ch.embed_url;
-      iframe.allow = "autoplay *; encrypted-media *; picture-in-picture *; fullscreen *";
-      iframe.allowFullscreen = true;
-      iframe.onload = () => { if (loader) loader.style.display = 'none'; };
-      if (wrapper) wrapper.appendChild(iframe);
+      this.createIframe(ch.embed_url);
     },
 
     playSportEvent(ev) {
@@ -1218,27 +1292,22 @@ const Hmovie = (function () {
       if (titleEl) titleEl.textContent = ev.title;
       if (subEl) subEl.textContent = ev.competition || 'Transmissão Esportiva';
 
+      const detailsBtn = document.getElementById('player-details-btn');
+      if (detailsBtn) detailsBtn.style.display = 'none';
+
       Auth.recordWatchHistory({ type: 'evento', id: ev.id, title: ev.title, poster: ev.event_logo || '' });
-
-      const loader = document.getElementById('player-iframe-loader');
-      const wrapper = document.getElementById('player-iframe-wrapper');
-      if (loader) loader.style.display = 'flex';
-
-      const old = wrapper?.querySelector('iframe');
-      if (old) old.remove();
 
       let streamUrl = ev.play_event_direct_url || ev.play_event_url;
       if (ev.embeds && ev.embeds.length > 0) streamUrl = ev.embeds[0].embed_url;
 
-      const iframe = document.createElement('iframe');
-      iframe.src = streamUrl;
-      iframe.allow = "autoplay *; encrypted-media *; picture-in-picture *; fullscreen *";
-      iframe.allowFullscreen = true;
-      iframe.onload = () => { if (loader) loader.style.display = 'none'; };
-      if (wrapper) wrapper.appendChild(iframe);
+      this.createIframe(streamUrl);
 
-      if (ev.embeds && ev.embeds.length > 1) this.renderSportsSidebar(ev);
-      else document.getElementById('player-sidebar')?.classList.remove('show');
+      if (ev.embeds && ev.embeds.length > 1) {
+        document.getElementById('player-sidebar')?.classList.add('show');
+        this.renderSportsSidebar(ev);
+      } else {
+        document.getElementById('player-sidebar')?.classList.remove('show');
+      }
     },
 
     renderSportsSidebar(ev) {
@@ -1270,44 +1339,138 @@ const Hmovie = (function () {
       const sidebar = document.getElementById('player-sidebar');
       if (!sidebar) return;
       sidebar.classList.add('show');
-      document.getElementById('player-sidebar-head').innerHTML = '<h4>Episódios</h4>';
+
+      const headEl = document.getElementById('player-sidebar-head');
+      if (!headEl) return;
+
+      headEl.innerHTML = `
+        <div class="sidebar-head-title-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
+          <h4 style="margin:0;"><i class="fa-solid fa-list-ul"></i> Episódios</h4>
+        </div>
+        <div class="sidebar-season-select-wrapper">
+          <select id="player-season-select" class="select-box select-box-sm" style="width:100%; padding:0.45rem 0.6rem; font-size:0.85rem; border-radius:6px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-subtle); cursor:pointer;"></select>
+        </div>
+      `;
+
+      const selectEl = document.getElementById('player-season-select');
+
+      try {
+        const details = args.id ? await API.fetchTMDBDetails('tv', args.id) : null;
+        const seasons = (details && details.seasons) ? details.seasons.filter(s => s.episode_count > 0) : [];
+
+        selectEl.innerHTML = '';
+
+        if (seasons.length > 0) {
+          seasons.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.season_number;
+            opt.textContent = s.name || `Temporada ${s.season_number}`;
+            selectEl.appendChild(opt);
+          });
+          selectEl.value = args.season != null ? args.season : (seasons[0].season_number === 0 && seasons.length > 1 ? seasons[1].season_number : seasons[0].season_number);
+        } else {
+          const currentSeason = parseInt(args.season || 1, 10);
+          const maxS = Math.max(currentSeason, 5);
+          for (let i = 1; i <= maxS; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `Temporada ${i}`;
+            selectEl.appendChild(opt);
+          }
+          selectEl.value = currentSeason;
+        }
+
+        selectEl.onchange = async (e) => {
+          const selectedSeason = parseInt(e.target.value, 10);
+          args.season = selectedSeason;
+          await this.loadSidebarEpisodes(args);
+        };
+
+      } catch (err) {
+        console.error('Erro ao montar seletor de temporadas na player sidebar:', err);
+      }
+
+      await this.loadSidebarEpisodes(args);
+    },
+
+    async loadSidebarEpisodes(args) {
       const list = document.getElementById('player-sidebar-episodes');
       if (!list) return;
-      list.innerHTML = '';
+      list.innerHTML = '<div class="loader-box" style="padding:1.5rem; text-align:center;"><div class="spinner"></div></div>';
 
       try {
         const res = await API.fetchTMDBSeason(args.id, args.season);
-        if (!res || !res.episodes) return;
+        list.innerHTML = '';
+        if (!res || !res.episodes || res.episodes.length === 0) {
+          list.innerHTML = '<p class="empty-state" style="padding:1rem; font-size:0.85rem; text-align:center; color:var(--text-dim);">Nenhum episódio encontrado nesta temporada.</p>';
+          return;
+        }
 
         res.episodes.forEach(ep => {
           const btn = document.createElement('button');
-          const active = ep.episode_number == args.episode;
-          btn.className = active ? 'ep-btn active' : 'ep-btn';
-          btn.innerHTML = `<span class="ep-btn-num">Episódio ${ep.episode_number}</span><span class="ep-btn-name">${ep.name}</span>`;
+          const isActive = ep.episode_number == args.episode;
+          const status = isActive ? 'active' : Auth.getEpisodeStatus(args.id, args.season, ep.episode_number);
+
+          let statusBadge = '';
+          if (isActive) {
+            btn.className = 'ep-btn active';
+            statusBadge = '<span class="ep-status-badge active"><i class="fa-solid fa-play"></i> Reproduzindo</span>';
+          } else if (status === 'last-watched') {
+            btn.className = 'ep-btn last-watched';
+            statusBadge = '<span class="ep-status-badge last-watched"><i class="fa-solid fa-clock-rotate-left"></i> Último visto</span>';
+          } else if (status === 'watched') {
+            btn.className = 'ep-btn watched';
+            statusBadge = '<span class="ep-status-badge watched"><i class="fa-solid fa-check"></i> Visto</span>';
+          } else {
+            btn.className = 'ep-btn';
+          }
+
+          btn.innerHTML = `
+            <div class="ep-btn-top">
+              <span class="ep-btn-num">Episódio ${ep.episode_number}</span>
+              ${statusBadge}
+            </div>
+            <span class="ep-btn-name">${ep.name}</span>
+          `;
           btn.onclick = () => {
-            document.querySelectorAll('#player-sidebar-episodes .ep-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            args.episode = ep.episode_number;
-
-            const subEl = document.getElementById('player-subtitle');
-            if (subEl) subEl.textContent = `T${args.season}: E${ep.episode_number} - ${ep.name}`;
-
-            Auth.recordWatchHistory(args);
-
-            let embedUrl = `https://superflixapi.pro/serie/${args.id}/${args.season}/${ep.episode_number}`;
-            let hash = '';
-            if (state.playerColor) hash += `#color:${state.playerColor}`;
-            if (state.prefNoEpList) hash += '#noEpList';
-            if (state.prefNoLink) hash += '#noLink';
-            if (state.prefTransparent) hash += '#transparent';
-            embedUrl += hash;
-
-            const iframe = document.getElementById('player-iframe-wrapper')?.querySelector('iframe');
-            if (iframe) iframe.src = embedUrl;
+            this.switchEpisode(args, ep);
+            showToast(`Reproduzindo Episódio ${ep.episode_number}: ${ep.name}`, 'info', 2500);
           };
           list.appendChild(btn);
         });
-      } catch (e) { console.error('Erro ao carregar sidebar de episódios:', e); }
+      } catch (e) {
+        console.error('Erro ao carregar episódios na sidebar:', e);
+        list.innerHTML = '<p class="empty-state" style="padding:1rem; font-size:0.85rem; text-align:center; color:var(--text-dim);">Erro ao carregar episódios.</p>';
+      }
+    },
+
+    async switchEpisode(args, ep) {
+      args.episode = ep.episode_number;
+
+      // Atualiza títulos na barra superior
+      const subEl = document.getElementById('player-subtitle');
+      if (subEl) subEl.textContent = `T${args.season}: E${ep.episode_number} - ${ep.name}`;
+
+      let embedUrl = `https://superflixapi.pro/serie/${args.id}/${args.season}/${ep.episode_number}`;
+      embedUrl = Player.buildEmbedUrl(embedUrl);
+
+      const loader = document.getElementById('player-iframe-loader');
+      if (loader) loader.style.display = 'flex';
+
+      const iframe = document.getElementById('player-iframe-wrapper')?.querySelector('iframe');
+      if (iframe) iframe.src = embedUrl;
+
+      // Salva no histórico e atualiza os marcadores de episódios visualmente
+      await Auth.recordWatchHistory(args);
+      this.loadSidebarEpisodes(args);
+    },
+
+    openSeriesDetails() {
+      if (state.activePlayer && state.activePlayer.id) {
+        const tvId = state.activePlayer.id;
+        this.close();
+        Catalog.openDetails({ type: 'tv', id: tvId });
+      }
     },
 
     close() {
@@ -1315,6 +1478,7 @@ const Hmovie = (function () {
       const iframe = document.getElementById('player-iframe-wrapper')?.querySelector('iframe');
       if (iframe) iframe.remove();
       state.activePlayer = null;
+      document.getElementById('player-sidebar')?.classList.remove('show');
     }
   };
 
@@ -1328,9 +1492,7 @@ const Hmovie = (function () {
         return;
       }
       try {
-        const res = await fetch('/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${state.userToken}` }
-        });
+        const res = await AuthFetch.get('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -1353,6 +1515,11 @@ const Hmovie = (function () {
       const navWatchlist = document.getElementById('nav-btn-watchlist');
       const mobileWatchlist = document.getElementById('mobile-btn-watchlist');
 
+      const mobileLoginBtn = document.getElementById('mobile-btn-login');
+      const mobileUserBox = document.getElementById('mobile-user-profile');
+      const mobileNameEl = document.getElementById('mobile-user-name');
+      const mobileAvatarEl = document.getElementById('mobile-user-avatar');
+
       if (user) {
         if (loginBtn) loginBtn.style.display = 'none';
         if (userBox) userBox.style.display = 'flex';
@@ -1362,11 +1529,20 @@ const Hmovie = (function () {
         if (nameEl) nameEl.textContent = user.username;
         if (avatarEl) avatarEl.textContent = user.username.charAt(0).toUpperCase();
 
+        if (mobileLoginBtn) mobileLoginBtn.style.display = 'none';
+        if (mobileUserBox) mobileUserBox.style.display = 'flex';
+        if (mobileNameEl) mobileNameEl.textContent = user.username;
+        if (mobileAvatarEl) mobileAvatarEl.textContent = user.username.charAt(0).toUpperCase();
+
         if (navWatchlist) navWatchlist.style.display = 'inline-flex';
         if (mobileWatchlist) mobileWatchlist.style.display = 'inline-flex';
       } else {
         if (loginBtn) loginBtn.style.display = 'inline-flex';
         if (userBox) userBox.style.display = 'none';
+
+        if (mobileLoginBtn) mobileLoginBtn.style.display = 'flex';
+        if (mobileUserBox) mobileUserBox.style.display = 'none';
+
         if (navWatchlist) navWatchlist.style.display = 'none';
         if (mobileWatchlist) mobileWatchlist.style.display = 'none';
         const continueSec = document.getElementById('continue-watching-section');
@@ -1435,56 +1611,117 @@ const Hmovie = (function () {
     async handleLogout() {
       if (state.userToken) {
         try {
-          await fetch('/api/auth/logout', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${state.userToken}` }
-          });
+          await AuthFetch.post('/api/auth/logout', {});
         } catch (e) {}
       }
 
       localStorage.removeItem('hmovie_token');
       state.userToken = '';
       state.currentUser = null;
-      Auth.updateUserUI(null);
+      this.updateUserUI(null);
       showToast('Sessão encerrada.', 'info');
     },
 
+    /**
+     * Retorna o status de um episódio: 'active', 'last-watched', 'watched' ou null
+     */
+    getEpisodeStatus(seriesId, seasonNum, episodeNum, currentPlayingEp = null) {
+      if (!seriesId) return null;
+      const sId = String(seriesId);
+      const sNum = parseInt(seasonNum || 1, 10);
+      const epNum = parseInt(episodeNum || 1, 10);
+
+      if (currentPlayingEp != null && epNum == currentPlayingEp) {
+        return 'active';
+      }
+
+      // Filtrar todo o histórico desta série
+      const seriesWatched = (state.userHistory || []).filter(h => 
+        (h.media_type === 'serie' || h.media_type === 'tv') && String(h.media_id) === sId
+      );
+
+      if (seriesWatched.length === 0) return null;
+
+      // O item no topo (mais recente) é o último visto
+      const lastWatched = seriesWatched[0];
+      if (lastWatched && (lastWatched.season || 1) == sNum && (lastWatched.episode || 1) == epNum) {
+        return 'last-watched';
+      }
+
+      // Se já assistiu antes em qualquer temporada/episódio
+      const isWatched = seriesWatched.some(h => (h.season || 1) == sNum && (h.episode || 1) == epNum);
+      if (isWatched) {
+        return 'watched';
+      }
+
+      return null;
+    },
+
     async recordWatchHistory(playArgs) {
-      if (!state.userToken) return;
+      if (!playArgs || !playArgs.id) return;
+      const record = {
+        media_type: playArgs.type || 'serie',
+        media_id: String(playArgs.id),
+        title: playArgs.title || '',
+        poster: playArgs.poster || '',
+        season: parseInt(playArgs.season || 1, 10),
+        episode: parseInt(playArgs.episode || 1, 10),
+        watched_at: new Date().toISOString()
+      };
+
+      // 1. Armazenamento Local no localStorage (para resposta instantânea e visitantes)
+      let localHist = [];
       try {
-        await fetch('/api/user/history', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.userToken}`
-          },
-          body: JSON.stringify({
-            media_type: playArgs.type,
-            media_id: String(playArgs.id),
-            title: playArgs.title,
-            poster: playArgs.poster || '',
-            season: playArgs.season || 1,
-            episode: playArgs.episode || 1
-          })
-        });
-        this.loadWatchHistory();
-      } catch (e) {}
+        localHist = JSON.parse(localStorage.getItem('hmovie_watch_history') || '[]');
+      } catch (e) { localHist = []; }
+
+      // Remove registro anterior do mesmo episódio para atualizar a data no topo
+      localHist = localHist.filter(h => !(h.media_type === record.media_type && String(h.media_id) === record.media_id && (h.season || 1) === record.season && (h.episode || 1) === record.episode));
+      localHist.unshift(record);
+      if (localHist.length > 250) localHist = localHist.slice(0, 250);
+      localStorage.setItem('hmovie_watch_history', JSON.stringify(localHist));
+
+      // 2. Se logado, envia ao servidor para persistência remota no MySQL/Redis
+      if (state.userToken) {
+        try {
+          await AuthFetch.post('/api/user/history', record);
+        } catch (e) {}
+      }
+
+      await this.loadWatchHistory();
     },
 
     async loadWatchHistory() {
-      if (!state.userToken) return;
-      try {
-        const res = await fetch('/api/user/history', {
-          headers: { 'Authorization': `Bearer ${state.userToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            state.userHistory = data.history || [];
-            this.renderContinueWatching(state.userHistory);
+      let remoteHistory = [];
+      if (state.userToken) {
+        try {
+          const res = await AuthFetch.get('/api/user/history');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.history)) {
+              remoteHistory = data.history;
+            }
           }
+        } catch (e) {}
+      }
+
+      let localHist = [];
+      try {
+        localHist = JSON.parse(localStorage.getItem('hmovie_watch_history') || '[]');
+      } catch (e) { localHist = []; }
+
+      // Mescla o histórico remoto com o local priorizando a data mais recente
+      const map = new Map();
+      [...remoteHistory, ...localHist].forEach(item => {
+        const key = `${item.media_type}_${item.media_id}_${item.season || 1}_${item.episode || 1}`;
+        if (!map.has(key)) {
+          map.set(key, item);
         }
-      } catch (e) {}
+      });
+
+      const combined = Array.from(map.values()).sort((a, b) => new Date(b.watched_at || 0) - new Date(a.watched_at || 0));
+      state.userHistory = combined;
+      this.renderContinueWatching(combined);
     },
 
     renderContinueWatching(history) {
@@ -1498,37 +1735,43 @@ const Hmovie = (function () {
         return;
       }
 
+      // Agrupar itens por série/filme para exibir apenas o último assistido de cada mídia
+      const uniqueHistory = [];
+      const seenMedia = new Set();
+      for (const item of history) {
+        const key = `${item.media_type}_${item.media_id}`;
+        if (!seenMedia.has(key)) {
+          seenMedia.add(key);
+          uniqueHistory.push(item);
+        }
+      }
+
+      if (uniqueHistory.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+
       section.style.display = 'block';
 
-      history.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-
-        const poster = item.poster ? `${TMDB_IMAGE_URL}/w342${item.poster}` : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=342&auto=format&fit=crop';
+      uniqueHistory.forEach(item => {
         const sub = item.media_type === 'serie' ? `Temp. ${item.season} Ep. ${item.episode}` : 'Filme';
-
-        card.innerHTML = `
-          <div class="card-poster-wrapper">
-            <img class="card-poster" src="${poster}" alt="${item.title}" loading="lazy" decoding="async">
-            <div class="card-overlay"><div class="card-play-icon"><i class="fa-solid fa-play"></i></div></div>
-            <span class="card-badge type-movie">Assistido</span>
-          </div>
-          <div class="card-details">
-            <div class="card-title">${item.title}</div>
-            <div class="card-subtitle">${sub}</div>
-          </div>
-        `;
-
-        card.onclick = () => {
-          Player.playItem({
-            type: item.media_type,
-            id: item.media_id,
-            season: item.season,
-            episode: item.episode,
-            title: item.title,
-            subtitle: sub
-          });
-        };
+        const card = CardFactory.createMediaCard({
+          poster: CardFactory.getPosterUrl(item.poster),
+          title: item.title,
+          subtitle: sub,
+          badgeText: 'Assistido',
+          badgeClass: 'type-movie',
+          onClick: () => {
+            Player.playItem({
+              type: item.media_type,
+              id: item.media_id,
+              season: item.season,
+              episode: item.episode,
+              title: item.title,
+              subtitle: sub
+            });
+          }
+        });
 
         container.appendChild(card);
       });
@@ -1545,9 +1788,7 @@ const Hmovie = (function () {
       }
 
       try {
-        const res = await fetch('/api/user/watchlist', {
-          headers: { 'Authorization': `Bearer ${state.userToken}` }
-        });
+        const res = await AuthFetch.get('/api/user/watchlist');
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -1571,25 +1812,15 @@ const Hmovie = (function () {
       }
 
       items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-
-        const poster = item.poster ? `${TMDB_IMAGE_URL}/w342${item.poster}` : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=342&auto=format&fit=crop';
-
-        card.innerHTML = `
-          <div class="card-poster-wrapper">
-            <img class="card-poster" src="${poster}" alt="${item.title}" loading="lazy" decoding="async">
-            <div class="card-overlay"><div class="card-play-icon"><i class="fa-solid fa-play"></i></div></div>
-            <span class="card-badge type-serie">${item.media_type}</span>
-          </div>
-          <div class="card-details">
-            <div class="card-title">${item.title}</div>
-          </div>
-        `;
-
-        card.onclick = () => {
-          Catalog.openDetails({ type: item.media_type === 'filme' ? 'movie' : 'tv', id: item.media_id });
-        };
+        const card = CardFactory.createMediaCard({
+          poster: CardFactory.getPosterUrl(item.poster),
+          title: item.title,
+          badgeText: item.media_type,
+          badgeClass: 'type-serie',
+          onClick: () => {
+            Catalog.openDetails({ type: item.media_type === 'filme' ? 'movie' : 'tv', id: item.media_id });
+          }
+        });
 
         grid.appendChild(card);
       });
@@ -1602,14 +1833,7 @@ const Hmovie = (function () {
       }
 
       try {
-        const res = await fetch('/api/user/watchlist', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.userToken}`
-          },
-          body: JSON.stringify(item)
-        });
+        const res = await AuthFetch.post('/api/user/watchlist', item);
         const data = await res.json();
         if (data.success) {
           showToast(data.added ? 'Adicionado à sua lista!' : 'Removido da sua lista.', 'success');
@@ -1621,19 +1845,38 @@ const Hmovie = (function () {
     }
   };
 
-  // Funções Globais expostas para compatibilidade com os handlers inline HTML
+  // Funções e Módulos Globais expostos para compatibilidade com handlers inline HTML
+  window.Hmovie = {
+    state,
+    Router,
+    Catalog,
+    LiveTV,
+    Sports,
+    Player,
+    Auth,
+    UI,
+    showToast
+  };
+
+  window.Player = Player;
+  window.UI = UI;
+  window.Router = Router;
+  window.Catalog = Catalog;
+  window.Auth = Auth;
   window.switchView = (view) => Router.switchView(view);
   window.closeModal = (id) => UI.closeModal(id);
   window.openModal = (id) => UI.openModal(id);
   window.switchAuthTab = (mode) => Auth.switchAuthTab(mode);
   window.handleAuthSubmit = (e) => Auth.handleSubmit(e);
   window.closePlayer = () => Player.close();
+  window.openSeriesDetails = () => Player.openSeriesDetails();
 
   // Inicialização no carregamento da página
   document.addEventListener('DOMContentLoaded', () => {
     initUI();
     UI.loadAppState();
     Auth.checkAuth();
+    Auth.loadWatchHistory();
     Router.switchView('home');
   });
 
