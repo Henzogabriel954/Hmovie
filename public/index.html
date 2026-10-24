@@ -2,7 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#08080d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Hmovie - Seu Portal Minimalista de Filmes, Séries e TV</title>
   <!-- Google Fonts: Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,57 +19,57 @@
 </head>
 <body>
   <div class="app-layout">
-    <!-- Desktop-First Header Navigation -->
-    <header class="navbar">
+    <!-- Adaptive Header Navigation -->
+    <header class="navbar" role="banner">
       <div class="navbar-container">
         <!-- Logo -->
-        <div class="brand" onclick="switchView('home')">
+        <div class="brand" role="button" tabindex="0" aria-label="Hmovie Início" onclick="switchView('home')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchView('home');}">
           <span class="brand-badge">H</span>
           <span class="brand-name">movie</span>
         </div>
 
-        <!-- Desktop Navigation Links -->
-        <nav class="nav-links">
-          <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Início</button>
-          <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> Filmes</button>
-          <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> Séries</button>
-          <button class="nav-link" data-view="animes"><i class="fa-solid fa-wand-magic-sparkles"></i> Animes</button>
-          <button class="nav-link" data-view="doramas"><i class="fa-solid fa-heart"></i> Doramas</button>
-          <button class="nav-link" data-view="live-tv"><i class="fa-solid fa-satellite-dish"></i> TV Ao Vivo</button>
-          <button class="nav-link" data-view="sports"><i class="fa-solid fa-trophy"></i> Esportes</button>
-          <button class="nav-link" data-view="watchlist" id="nav-btn-watchlist" style="display:none;"><i class="fa-solid fa-bookmark"></i> Minha Lista</button>
+        <!-- Primary Navigation Links (Scrollable on Tablets, Full on Desktop) -->
+        <nav class="nav-links" aria-label="Navegação Principal">
+          <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> <span>Início</span></button>
+          <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> <span>Filmes</span></button>
+          <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> <span>Séries</span></button>
+          <button class="nav-link" data-view="animes"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>Animes</span></button>
+          <button class="nav-link" data-view="doramas"><i class="fa-solid fa-heart"></i> <span>Doramas</span></button>
+          <button class="nav-link" data-view="live-tv"><i class="fa-solid fa-satellite-dish"></i> <span>TV Ao Vivo</span></button>
+          <button class="nav-link" data-view="sports"><i class="fa-solid fa-trophy"></i> <span>Esportes</span></button>
+          <button class="nav-link" data-view="watchlist" id="nav-btn-watchlist" style="display:none;"><i class="fa-solid fa-bookmark"></i> <span>Minha Lista</span></button>
         </nav>
 
         <!-- Right Side Controls (Search + User Profile + Settings) -->
         <div class="header-actions">
-          <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="global-search" placeholder="Buscar filmes, canais ou jogos...">
-            <button class="clear-btn" id="clear-search-btn"><i class="fa-solid fa-xmark"></i></button>
+          <div class="search-box" id="search-box-container" role="search">
+            <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+            <input type="search" id="global-search" placeholder="Buscar filmes, canais ou jogos..." aria-label="Buscar filmes, séries, canais ou jogos" autocomplete="off">
+            <button type="button" class="clear-btn" id="clear-search-btn" aria-label="Limpar busca"><i class="fa-solid fa-xmark"></i></button>
           </div>
 
           <!-- Auth Account Area -->
           <div class="user-auth-area">
-            <button class="btn btn-secondary btn-sm" id="btn-open-login"><i class="fa-solid fa-user"></i> Entrar</button>
+            <button class="btn btn-secondary btn-sm" id="btn-open-login" aria-label="Entrar na conta"><i class="fa-solid fa-user"></i> <span class="login-btn-text">Entrar</span></button>
             <div class="user-profile-badge" id="user-profile-box" style="display:none;">
               <span class="user-avatar" id="user-avatar">U</span>
               <span class="user-name" id="user-name">Usuário</span>
-              <button class="btn-logout" id="btn-logout" title="Sair da Conta"><i class="fa-solid fa-right-from-bracket"></i></button>
+              <button class="btn-logout" id="btn-logout" title="Sair da Conta" aria-label="Sair da Conta"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
           </div>
 
-          <button class="btn-settings-icon" data-view="settings" title="Configurações">
+          <button class="btn-settings-icon" data-view="settings" title="Configurações" aria-label="Configurações">
             <i class="fa-solid fa-gear"></i>
           </button>
 
-          <button class="mobile-toggle" id="mobile-menu-btn">
+          <button class="mobile-toggle" id="mobile-menu-btn" aria-label="Abrir menu de navegação" aria-expanded="false">
             <i class="fa-solid fa-bars"></i>
           </button>
         </div>
       </div>
 
-      <!-- Mobile Dropdown Navigation -->
-      <div class="mobile-menu" id="mobile-menu-drawer">
+      <!-- Mobile Dropdown Navigation Drawer -->
+      <div class="mobile-menu" id="mobile-menu-drawer" aria-label="Menu Mobile">
         <div class="mobile-auth-section" id="mobile-auth-section">
           <button class="btn btn-primary w-100 mobile-auth-btn" id="mobile-btn-login" onclick="openModal('auth-modal'); UI.closeMobileDrawer();">
             <i class="fa-solid fa-user"></i> Entrar / Criar Conta
@@ -81,24 +85,26 @@
           </div>
         </div>
         <div class="mobile-menu-divider"></div>
-        <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Início</button>
-        <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> Filmes</button>
-        <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> Séries</button>
-        <button class="nav-link" data-view="animes"><i class="fa-solid fa-wand-magic-sparkles"></i> Animes</button>
-        <button class="nav-link" data-view="doramas"><i class="fa-solid fa-heart"></i> Doramas</button>
-        <button class="nav-link" data-view="live-tv"><i class="fa-solid fa-satellite-dish"></i> TV Ao Vivo</button>
-        <button class="nav-link" data-view="sports"><i class="fa-solid fa-trophy"></i> Esportes</button>
-        <button class="nav-link" data-view="watchlist" id="mobile-btn-watchlist" style="display:none;"><i class="fa-solid fa-bookmark"></i> Minha Lista</button>
-        <button class="nav-link" data-view="settings"><i class="fa-solid fa-gear"></i> Configurações</button>
+        <div class="mobile-drawer-grid">
+          <button class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Início</button>
+          <button class="nav-link" data-view="movies"><i class="fa-solid fa-film"></i> Filmes</button>
+          <button class="nav-link" data-view="series"><i class="fa-solid fa-tv"></i> Séries</button>
+          <button class="nav-link" data-view="animes"><i class="fa-solid fa-wand-magic-sparkles"></i> Animes</button>
+          <button class="nav-link" data-view="doramas"><i class="fa-solid fa-heart"></i> Doramas</button>
+          <button class="nav-link" data-view="live-tv"><i class="fa-solid fa-satellite-dish"></i> TV Ao Vivo</button>
+          <button class="nav-link" data-view="sports"><i class="fa-solid fa-trophy"></i> Esportes</button>
+          <button class="nav-link" data-view="watchlist" id="mobile-btn-watchlist" style="display:none;"><i class="fa-solid fa-bookmark"></i> Minha Lista</button>
+          <button class="nav-link" data-view="settings"><i class="fa-solid fa-gear"></i> Configurações</button>
+        </div>
       </div>
     </header>
 
     <!-- Main Content Body -->
-    <main class="content-wrapper">
+    <main class="content-wrapper" id="main-content">
       
       <!-- VIEW: HOME -->
       <section class="view-section active" id="view-home">
-        <!-- Minimal Hero Showcase for PC/Laptop -->
+        <!-- Fluid Hero Showcase -->
         <div class="hero-showcase" id="hero-showcase">
           <div class="hero-bg" id="hero-bg"></div>
           <div class="hero-overlay"></div>
@@ -116,14 +122,14 @@
         <!-- Section: Continuar Assistindo (User Watch History) -->
         <div class="section-block" id="continue-watching-section" style="display:none;">
           <div class="block-header">
-            <h2><i class="fa-solid fa-clock-rotate-left text-accent"></i> Continuar Assistindo (Seus Históricos)</h2>
+            <h2><i class="fa-solid fa-clock-rotate-left text-accent"></i> Continuar Assistindo</h2>
           </div>
           <div class="row-scroll-wrapper">
-            <button class="scroll-btn left" id="btn-prev-continue"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="scroll-btn left" id="btn-prev-continue" aria-label="Rolar para a esquerda"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="row-scroll cards-row" id="continue-watching-row">
               <!-- History cards -->
             </div>
-            <button class="scroll-btn right" id="btn-next-continue"><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="scroll-btn right" id="btn-next-continue" aria-label="Rolar para a direita"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
         </div>
 
@@ -133,11 +139,11 @@
             <h2><i class="fa-solid fa-fire text-accent"></i> Recém Lançados</h2>
           </div>
           <div class="row-scroll-wrapper">
-            <button class="scroll-btn left" id="btn-prev-releases"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="scroll-btn left" id="btn-prev-releases" aria-label="Rolar para a esquerda"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="row-scroll cards-row" id="releases-carousel">
               <!-- Cards dynamically inserted -->
             </div>
-            <button class="scroll-btn right" id="btn-next-releases"><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="scroll-btn right" id="btn-next-releases" aria-label="Rolar para a direita"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
         </div>
 
@@ -148,11 +154,11 @@
             <button class="link-btn view-all-btn" data-target="live-tv">Ver Todos <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <div class="row-scroll-wrapper">
-            <button class="scroll-btn left" id="btn-prev-channels"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="scroll-btn left" id="btn-prev-channels" aria-label="Rolar para a esquerda"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="row-scroll channels-row" id="channels-carousel">
               <!-- Channels dynamically inserted -->
             </div>
-            <button class="scroll-btn right" id="btn-next-channels"><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="scroll-btn right" id="btn-next-channels" aria-label="Rolar para a direita"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
         </div>
 
@@ -172,7 +178,7 @@
       <section class="view-section" id="view-catalog">
         <div class="page-title-bar">
           <h1 id="catalog-title">Filmes</h1>
-          <div class="genres-row" id="genres-container">
+          <div class="genres-row" id="genres-container" role="tablist" aria-label="Filtro de gêneros">
             <!-- Genre pills -->
           </div>
         </div>
@@ -206,7 +212,7 @@
         <div class="page-title-bar">
           <h1>Canais de TV Ao Vivo</h1>
           <p class="page-subtitle">Transmissões ao vivo dos principais canais</p>
-          <div class="genres-row" id="tv-categories-container">
+          <div class="genres-row" id="tv-categories-container" role="tablist" aria-label="Categorias de canais">
             <!-- Categories -->
           </div>
         </div>
@@ -224,10 +230,10 @@
         </div>
 
         <div class="sports-filters">
-          <div class="genres-row" id="sports-categories-container">
+          <div class="genres-row" id="sports-categories-container" role="tablist" aria-label="Modalidades esportivas">
             <!-- Categories -->
           </div>
-          <div class="status-tabs">
+          <div class="status-tabs" role="tablist" aria-label="Status da transmissão">
             <button class="status-btn active" data-status="all">Todos</button>
             <button class="status-btn" data-status="live"><span class="pulse-dot"></span> Ao Vivo</button>
             <button class="status-btn" data-status="upcoming">Próximos</button>
@@ -246,28 +252,28 @@
           <p class="page-subtitle">Personalize a aparência do seu reprodutor e preferências visuais</p>
         </div>
 
-        <div class="settings-layout" style="grid-template-columns: 1fr;">
+        <div class="settings-layout">
           <!-- Custom Player Box -->
           <div class="settings-card">
             <h3><i class="fa-solid fa-sliders text-accent"></i> Preferências do Reprodutor</h3>
-            <p class="card-desc">Personalize o comportamento do player Hmovie.</p>
+            <p class="card-desc">Personalize o comportamento do player Hmovie em todos os seus dispositivos.</p>
 
             <div class="input-group">
               <label>Cor do Player</label>
               <div class="color-options">
-                <button class="color-btn active" data-color="7c3aed" style="background:#7c3aed"></button>
-                <button class="color-btn" data-color="ec4899" style="background:#ec4899"></button>
-                <button class="color-btn" data-color="06b6d4" style="background:#06b6d4"></button>
-                <button class="color-btn" data-color="10b981" style="background:#10b981"></button>
-                <button class="color-btn" data-color="f59e0b" style="background:#f59e0b"></button>
-                <input type="text" id="player-custom-color" placeholder="Hex (ex: 7c3aed)" maxlength="6">
+                <button class="color-btn active" data-color="7c3aed" style="background:#7c3aed" aria-label="Roxo"></button>
+                <button class="color-btn" data-color="ec4899" style="background:#ec4899" aria-label="Rosa"></button>
+                <button class="color-btn" data-color="06b6d4" style="background:#06b6d4" aria-label="Ciano"></button>
+                <button class="color-btn" data-color="10b981" style="background:#10b981" aria-label="Verde"></button>
+                <button class="color-btn" data-color="f59e0b" style="background:#f59e0b" aria-label="Âmbar"></button>
+                <input type="text" id="player-custom-color" placeholder="Hex (ex: 7c3aed)" maxlength="6" aria-label="Cor hexadecimal personalizada">
               </div>
             </div>
 
             <div class="check-group">
               <label class="check-item">
                 <input type="checkbox" id="pref-no-ep-list" checked>
-                <span>Ocultar lista de episódios dentro do player</span>
+                <span>Ocultar lista de episódios interna do embed</span>
               </label>
               <label class="check-item">
                 <input type="checkbox" id="pref-no-link" checked>
@@ -279,7 +285,7 @@
               </label>
             </div>
 
-            <div class="btn-row" style="margin-top: 1.5rem;">
+            <div class="btn-row settings-actions">
               <button class="btn btn-primary" id="btn-save-settings">Salvar Preferências</button>
             </div>
           </div>
@@ -287,13 +293,41 @@
       </section>
 
     </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR (Ergonomia Touch <= 768px) -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Navegação Rápida Mobile">
+      <button class="bottom-nav-item nav-link active" data-view="home">
+        <i class="fa-solid fa-house"></i>
+        <span>Início</span>
+      </button>
+      <button class="bottom-nav-item nav-link" data-view="movies">
+        <i class="fa-solid fa-film"></i>
+        <span>Filmes</span>
+      </button>
+      <button class="bottom-nav-item nav-link" data-view="series">
+        <i class="fa-solid fa-tv"></i>
+        <span>Séries</span>
+      </button>
+      <button class="bottom-nav-item nav-link" data-view="live-tv">
+        <i class="fa-solid fa-satellite-dish"></i>
+        <span>TV</span>
+      </button>
+      <button class="bottom-nav-item nav-link" data-view="sports">
+        <i class="fa-solid fa-trophy"></i>
+        <span>Jogos</span>
+      </button>
+      <button class="bottom-nav-item" id="bottom-nav-menu-btn" aria-label="Mais categorias e conta">
+        <i class="fa-solid fa-grip"></i>
+        <span>Mais</span>
+      </button>
+    </nav>
   </div>
 
   <!-- MODAL: AUTHENTICATION (LOGIN / REGISTRAR) -->
-  <div class="modal" id="auth-modal">
+  <div class="modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <div class="modal-bg" onclick="closeModal('auth-modal')"></div>
     <div class="modal-card auth-card">
-      <button class="close-btn" onclick="closeModal('auth-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <button class="close-btn" onclick="closeModal('auth-modal')" aria-label="Fechar modal"><i class="fa-solid fa-xmark"></i></button>
       
       <div class="auth-header">
         <span class="brand-badge">H</span>
@@ -301,22 +335,22 @@
         <p class="auth-subtitle">Guarde o histórico do que você assiste e crie sua lista</p>
       </div>
 
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Entrar</button>
-        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Criar Conta</button>
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')" role="tab">Entrar</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')" role="tab">Criar Conta</button>
       </div>
 
       <form class="auth-form" id="auth-form" onsubmit="handleAuthSubmit(event)">
         <div class="input-group">
           <label for="auth-username">Nome de Usuário</label>
-          <input type="text" id="auth-username" placeholder="Digite seu usuário..." required minlength="3">
+          <input type="text" id="auth-username" placeholder="Digite seu usuário..." required minlength="3" autocomplete="username">
         </div>
         <div class="input-group">
           <label for="auth-password">Senha</label>
-          <input type="password" id="auth-password" placeholder="Digite sua senha..." required minlength="4">
+          <input type="password" id="auth-password" placeholder="Digite sua senha..." required minlength="4" autocomplete="current-password">
         </div>
 
-        <div id="auth-error-msg" class="test-msg text-red" style="display:none;"></div>
+        <div id="auth-error-msg" class="test-msg text-red" style="display:none;" role="alert"></div>
 
         <button type="submit" class="btn btn-primary btn-large w-100" id="btn-auth-submit">Entrar</button>
       </form>
@@ -324,10 +358,10 @@
   </div>
 
   <!-- MODAL: DETALHES DO CONTEÚDO -->
-  <div class="modal" id="details-modal">
+  <div class="modal" id="details-modal" role="dialog" aria-modal="true" aria-labelledby="details-title">
     <div class="modal-bg" onclick="closeModal('details-modal')"></div>
     <div class="modal-card">
-      <button class="close-btn" onclick="closeModal('details-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <button class="close-btn" onclick="closeModal('details-modal')" aria-label="Fechar detalhes"><i class="fa-solid fa-xmark"></i></button>
       
       <div class="modal-hero">
         <div class="modal-hero-img" id="details-backdrop"></div>
@@ -350,14 +384,20 @@
         <!-- Series Selector -->
         <div class="episodes-section" id="details-series-nav" style="display:none;">
           <div class="episodes-header">
-            <h3>Temporadas e Episódios</h3>
-            <select id="season-selector" class="select-box"></select>
+            <h3><i class="fa-solid fa-list-ol text-accent"></i> Temporadas e Episódios</h3>
+            <div class="episodes-controls">
+              <div class="ep-search-box" id="details-ep-search-wrap" style="display:none;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" id="details-ep-search" placeholder="Filtrar ep..." aria-label="Filtrar episódios">
+              </div>
+              <select id="season-selector" class="select-box" aria-label="Selecionar temporada"></select>
+            </div>
           </div>
           <div class="episodes-list" id="episodes-container"></div>
         </div>
 
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="details-watchlist-btn" style="margin-right:0.5rem;">
+          <button class="btn btn-secondary" id="details-watchlist-btn">
             <i class="fa-solid fa-bookmark"></i> Minha Lista
           </button>
           <button class="btn btn-primary btn-large" id="details-play-btn"><i class="fa-solid fa-play"></i> Assistir Agora</button>
@@ -367,31 +407,38 @@
   </div>
 
   <!-- MODAL: REPRODUTOR HMOVIE (THEATER MODE) -->
-  <div class="player-window" id="player-modal">
+  <div class="player-window" id="player-modal" role="dialog" aria-modal="true" aria-labelledby="player-title">
     <div class="player-topbar">
       <div class="playing-title-box">
-        <span class="playing-brand">Hmovie Player</span>
-        <h3 id="player-title">Título</h3>
-        <span id="player-subtitle"></span>
+        <span class="playing-brand">Hmovie</span>
+        <div class="playing-titles-text">
+          <h3 id="player-title">Título</h3>
+          <span id="player-subtitle"></span>
+        </div>
       </div>
-      <div class="player-topbar-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-        <button class="btn btn-secondary btn-sm" id="player-details-btn" onclick="Player.openSeriesDetails()" style="display:none; padding: 0.4rem 0.75rem; font-size: 0.85rem;">
+      <div class="player-topbar-actions">
+        <button class="btn btn-secondary btn-sm player-action-btn" id="player-toggle-sidebar-btn" onclick="Player.toggleSidebar()" style="display:none;" title="Mostrar/Ocultar lista de episódios">
+          <i class="fa-solid fa-list-ul"></i> <span class="btn-text">Episódios</span>
+        </button>
+        <button class="btn btn-secondary btn-sm player-action-btn" id="player-details-btn" onclick="Player.openSeriesDetails()" style="display:none;" title="Ver detalhes da série">
           <i class="fa-solid fa-circle-info"></i> <span class="btn-text">Detalhes</span>
         </button>
-        <button class="btn btn-close-player" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i> Fechar</button>
+        <button class="btn btn-close-player" onclick="closePlayer()" aria-label="Fechar reprodutor">
+          <i class="fa-solid fa-xmark"></i> <span class="close-text">Fechar</span>
+        </button>
       </div>
     </div>
 
-    <div class="player-body">
+    <div class="player-body" id="player-body">
       <div class="iframe-container" id="player-iframe-wrapper">
         <div class="player-loading" id="player-iframe-loader">
           <div class="spinner"></div>
-          <p>Carregando stream...</p>
+          <p>Carregando transmissão...</p>
         </div>
       </div>
 
-      <!-- Episode/Stream Sidebar (Fixo - do lado no PC/Landscape, embaixo no celular portrait) -->
-      <aside class="player-sidebar" id="player-sidebar">
+      <!-- Episode/Stream Sidebar (Retrátil em qualquer orientação, lateral no PC/Landscape, inferior no celular retrato) -->
+      <aside class="player-sidebar" id="player-sidebar" aria-label="Lista de episódios e transmissões">
         <div class="sidebar-head" id="player-sidebar-head">
           <h4>Episódios</h4>
         </div>
@@ -401,7 +448,7 @@
   </div>
 
   <!-- TOAST NOTIFICATION CONTAINER -->
-  <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>
